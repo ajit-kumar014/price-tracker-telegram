@@ -636,11 +636,6 @@ SOFTWARE.
 
 This tool is for educational and personal use only. Please respect Amazon's robots.txt and terms of service. Users are responsible for ensuring their usage complies with applicable laws and website terms of service.
 
-## 🙋‍♂️ Support
-
-- 📧 **Email**: your-email@example.com
-- 🐛 **Issues**: [GitHub Issues](https://github.com/yourusername/amazon-price-tracker/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/yourusername/amazon-price-tracker/discussions)
 
 ---
 
