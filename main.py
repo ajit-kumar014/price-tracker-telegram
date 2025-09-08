@@ -24,8 +24,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database setup
-DATABASE_URL = "sqlite:///./price_tracker.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+DATABASE_URL = "postgresql+psycopg2://jack@localhost:5432/price_tracker"
+engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -121,8 +121,12 @@ class AmazonScraper:
                     name = element.get_text().strip()
                     break
             
-            # Extract price
+            # Extract price - Updated selectors for the new structure
             price_selectors = [
+                '.a-price.priceToPay .a-price-whole',
+                '.a-price.reinventPricePriceToPayMargin .a-price-whole',
+                '.a-price.aok-align-center .a-price-whole',
+                '.a-price .a-price-whole',
                 '.a-price.a-text-price.a-size-medium.apexPriceToPay .a-offscreen',
                 '.a-price-whole',
                 '.a-price .a-offscreen',
@@ -135,11 +139,32 @@ class AmazonScraper:
                 element = soup.select_one(selector)
                 if element:
                     price_text = element.get_text().strip()
-                    # Extract numeric value from price text
-                    price_match = re.search(r'[\d,]+\.?\d*', price_text.replace(',', ''))
+                    # Remove currency symbols and commas, extract numeric value
+                    price_text_clean = re.sub(r'[₹$€£¥,]', '', price_text)
+                    price_match = re.search(r'[\d]+\.?\d*', price_text_clean)
                     if price_match:
                         price = float(price_match.group())
                         break
+            
+            # If price_whole didn't work, try getting from price symbol + whole combination
+            if price is None:
+                price_container = soup.select_one('.a-price.priceToPay') or soup.select_one('.a-price.reinventPricePriceToPayMargin')
+                if price_container:
+                    price_whole = price_container.select_one('.a-price-whole')
+                    price_fraction = price_container.select_one('.a-price-fraction')
+                    
+                    if price_whole:
+                        whole_text = price_whole.get_text().strip()
+                        fraction_text = price_fraction.get_text().strip() if price_fraction else "00"
+                        
+                        # Combine whole and fraction parts
+                        try:
+                            price = float(f"{whole_text}.{fraction_text}")
+                        except ValueError:
+                            # Fallback to just whole number
+                            price_match = re.search(r'[\d,]+', whole_text.replace(',', ''))
+                            if price_match:
+                                price = float(price_match.group())
             
             return {
                 'name': name,
@@ -158,7 +183,7 @@ class AmazonScraper:
         """Check if URL is a valid Amazon product URL"""
         parsed = urlparse(url)
         return 'amazon' in parsed.netloc and '/dp/' in parsed.path
-
+    
 # Telegram notification service
 class TelegramNotifier:
     def __init__(self, bot_token: str, chat_id: str):
