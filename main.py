@@ -6,6 +6,7 @@ import time
 from datetime import datetime, timedelta
 from typing import List, Optional
 from urllib.parse import urljoin, urlparse
+from dotenv import load_dotenv
 
 import requests
 import schedule
@@ -19,6 +20,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from telegram import Bot
 from telegram.error import TelegramError
 
+load_dotenv()
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
