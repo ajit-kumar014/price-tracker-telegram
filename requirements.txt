@@ -1,9 +1,26 @@
+# Web Framework
 fastapi==0.104.1
-uvicorn==0.24.0
+uvicorn[standard]==0.24.0
+
+# Database
 sqlalchemy==2.0.23
-beautifulsoup4==4.12.2
+psycopg2-binary==2.9.9
+
+# HTTP Requests & Web Scraping
 requests==2.31.0
-python-telegram-bot==20.7
-schedule==1.2.0
-python-multipart==0.0.6
+beautifulsoup4==4.12.2
+
+# Data Validation
 pydantic==2.5.0
+
+# Telegram Bot
+python-telegram-bot==20.7
+
+# Task Scheduling
+schedule==1.2.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# ASGI Server
+uvicorn==0.24.0
