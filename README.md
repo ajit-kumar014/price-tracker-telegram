@@ -1,4 +1,4 @@
-# Amazon Price Tracker API
+# Amazon/Flipkart Price Tracker API
 
 A robust, scalable price tracking system built with FastAPI, capable of monitoring 1000+ Amazon products with automated notifications through Telegram.
 
