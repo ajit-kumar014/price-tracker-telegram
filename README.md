@@ -1,6 +1,6 @@
-# Amazon/Flipkart Price Tracker API
+# Amazon_Flipkart Price Tracker API
 
-A robust, scalable price tracking system built with FastAPI, capable of monitoring 1000+ Amazon products with automated notifications through Telegram.
+A robust, scalable price tracking system built with FastAPI, capable of monitoring 1000+ Amazon_Flipkart products with automated notifications through Telegram.
 
 ![Python](https://img.shields.io/badge/python-v3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)
@@ -11,7 +11,7 @@ A robust, scalable price tracking system built with FastAPI, capable of monitori
 
 - **High-Performance API**: Built with FastAPI for async operations and auto-generated documentation
 - **Scalable Architecture**: Handle 1000+ products efficiently with optimized database queries
-- **Automated Scraping**: Intelligent Amazon price extraction using BeautifulSoup with anti-bot measures
+- **Automated Scraping**: Intelligent Amazon_Flipkart price extraction using BeautifulSoup with anti-bot measures
 - **Smart Notifications**: Telegram bot integration for instant price drop alerts
 - **Price History**: Complete historical price tracking with trend analysis
 - **Docker Ready**: Containerized for easy homelab deployment
@@ -55,8 +55,8 @@ A robust, scalable price tracking system built with FastAPI, capable of monitori
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/amazon-price-tracker.git
-cd amazon-price-tracker
+git clone https://github.com/yourusername/Amazon_Flipkart-price-tracker.git
+cd Amazon_Flipkart-price-tracker
 
 # Configure environment
 cp .env.example .env
@@ -77,8 +77,8 @@ Your API will be available at `http://localhost:8000` with documentation at `htt
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/amazon-price-tracker.git
-cd amazon-price-tracker
+git clone https://github.com/yourusername/Amazon_Flipkart-price-tracker.git
+cd Amazon_Flipkart-price-tracker
 
 # Create environment file
 cat > .env << EOF
@@ -97,8 +97,8 @@ docker-compose logs -f
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/amazon-price-tracker.git
-cd amazon-price-tracker
+git clone https://github.com/yourusername/Amazon_Flipkart-price-tracker.git
+cd Amazon_Flipkart-price-tracker
 
 # Create virtual environment
 python -m venv venv
@@ -134,7 +134,7 @@ LOG_LEVEL=INFO
 ### File Structure
 
 ```
-amazon-price-tracker/
+Amazon_Flipkart-price-tracker/
 ├── main.py                 # Main application file
 ├── requirements.txt        # Python dependencies
 ├── Dockerfile             # Docker configuration
@@ -229,7 +229,7 @@ curl -X POST "http://localhost:8000/products/" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "iPhone 15 Pro",
-    "url": "https://www.amazon.com/dp/B0CHX1W1XY",
+    "url": "https://www.Amazon_Flipkart.com/dp/B0CHX1W1XY",
     "target_price": 899.99,
     "user_id": "user123"
   }'
@@ -290,7 +290,7 @@ class PriceTrackerClient:
 client = PriceTrackerClient()
 client.add_product(
     name="Gaming Laptop",
-    url="https://www.amazon.com/dp/PRODUCTID",
+    url="https://www.Amazon_Flipkart.com/dp/PRODUCTID",
     target_price=1200.00,
     user_id="user123"
 )
@@ -346,7 +346,7 @@ docker stats price-tracker
 
 ### Common Issues
 
-#### 1. Amazon Blocking Requests
+#### 1. Amazon_Flipkart Blocking Requests
 
 **Symptoms**: Products not updating, scraping errors in logs
 
@@ -566,8 +566,8 @@ def get_cached_info(url: str):
 
 ```bash
 # Fork the repository and clone
-git clone https://github.com/yourusername/amazon-price-tracker.git
-cd amazon-price-tracker
+git clone https://github.com/yourusername/Amazon_Flipkart-price-tracker.git
+cd Amazon_Flipkart-price-tracker
 
 # Create development environment
 python -m venv dev-env
@@ -634,7 +634,7 @@ SOFTWARE.
 
 ## ⚠️ Legal Notice
 
-This tool is for educational and personal use only. Please respect Amazon's robots.txt and terms of service. Users are responsible for ensuring their usage complies with applicable laws and website terms of service.
+This tool is for educational and personal use only. Please respect Amazon_Flipkart's robots.txt and terms of service. Users are responsible for ensuring their usage complies with applicable laws and website terms of service.
 
 
 ---
