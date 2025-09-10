@@ -23,4 +23,6 @@ schedule==1.2.0
 python-dotenv==1.0.0
 
 # ASGI Server
+fake-useragent
+cloudscraper
 uvicorn==0.24.0
