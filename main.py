@@ -5,7 +5,7 @@ import re
 import time
 import threading
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from urllib.parse import urljoin, urlparse
 from dotenv import load_dotenv
 
@@ -32,6 +32,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://jack@localhost:5
 engine = create_engine(DATABASE_URL, echo=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+def reset_database():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    print("Database reset complete!")
+
 
 # Models
 class Product(Base):
@@ -48,6 +53,7 @@ class Product(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     user_id = Column(String, index=True)
+    store = Column(String, default="amazon")  # Added store field to track which marketplace
 
 class PriceHistory(Base):
     __tablename__ = "price_history"
@@ -56,6 +62,24 @@ class PriceHistory(Base):
     product_id = Column(Integer, index=True)
     price = Column(Float)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+def check_and_update_schema():
+    """Check if store column exists and add it if missing"""
+    from sqlalchemy import inspect, text
+    
+    engine = create_engine(DATABASE_URL)
+    inspector = inspect(engine)
+    columns = [col['name'] for col in inspector.get_columns('products')]
+    
+    if 'store' not in columns:
+        logger.info("Adding missing 'store' column to products table...")
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE products ADD COLUMN store VARCHAR DEFAULT 'amazon'"))
+            conn.commit()
+        logger.info("Schema update complete!")
+
+# Call this function before creating tables
+check_and_update_schema()
 
 Base.metadata.create_all(bind=engine)
 
@@ -77,6 +101,7 @@ class ProductResponse(BaseModel):
     last_checked: Optional[datetime]
     is_active: bool
     created_at: datetime
+    store: str
 
 class PriceAlert(BaseModel):
     product_id: int
@@ -89,8 +114,8 @@ class PriceAlert(BaseModel):
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "YOUR_CHAT_ID_HERE")
 
-# Amazon scraper class
-class AmazonScraper:
+# Base scraper class
+class BaseScraper:
     def __init__(self):
         self.session = requests.Session()
         self.headers = {
@@ -106,7 +131,22 @@ class AmazonScraper:
         }
         self.session.headers.update(self.headers)
     
-    def get_product_info(self, url: str) -> dict:
+    def extract_price(self, text: str) -> Optional[float]:
+        """Extract numeric price from text"""
+        if not text:
+            return None
+            
+        # Remove currency symbols, commas, and other non-numeric characters
+        price_text_clean = re.sub(r'[₹$€£¥,\s]', '', text)
+        price_match = re.search(r'[\d]+\.?\d*', price_text_clean)
+        
+        if price_match:
+            return float(price_match.group())
+        return None
+
+# Amazon scraper class
+class AmazonScraper(BaseScraper):
+    def get_product_info(self, url: str) -> Dict[str, Any]:
         """Extract product information from Amazon URL"""
         try:
             response = self.session.get(url, timeout=15)
@@ -148,11 +188,8 @@ class AmazonScraper:
                 element = soup.select_one(selector)
                 if element:
                     price_text = element.get_text().strip()
-                    # Remove currency symbols and commas, extract numeric value
-                    price_text_clean = re.sub(r'[₹$€£¥,\s]', '', price_text)
-                    price_match = re.search(r'[\d]+\.?\d*', price_text_clean)
-                    if price_match:
-                        price = float(price_match.group())
+                    price = self.extract_price(price_text)
+                    if price:
                         break
             
             # If price_whole didn't work, try getting from price symbol + whole combination
@@ -171,11 +208,9 @@ class AmazonScraper:
                             price = float(f"{whole_text}.{fraction_text}")
                         except ValueError:
                             # Fallback to just whole number
-                            price_match = re.search(r'[\d,]+', whole_text.replace(',', ''))
-                            if price_match:
-                                price = float(price_match.group())
+                            price = self.extract_price(whole_text)
             
-            logger.info(f"Scraped product: {name}, Price: {price}")
+            logger.info(f"Scraped Amazon product: {name}, Price: {price}")
             
             return {
                 'name': name,
@@ -190,11 +225,149 @@ class AmazonScraper:
             logger.error(f"Parsing error for {url}: {e}")
             return {'success': False, 'error': str(e)}
     
-    def is_valid_amazon_url(self, url: str) -> bool:
+    def is_valid_url(self, url: str) -> bool:
         """Check if URL is a valid Amazon product URL"""
         parsed = urlparse(url)
         return 'amazon' in parsed.netloc and '/dp/' in parsed.path
+
+# Flipkart scraper class
+import random
+import time
+from fake_useragent import UserAgent
+
+# Add to your imports at the top
+import cloudscraper  # For bypassing Cloudflare protection
+
+# Update your FlipkartScraper class
+class FlipkartScraper(BaseScraper):
+    def __init__(self):
+        super().__init__()
+        # Use cloudscraper to bypass Cloudflare protection
+        self.scraper = cloudscraper.create_scraper()
+        self.ua = UserAgent()
+        self.set_random_headers()
     
+    def set_random_headers(self):
+        """Set random headers to avoid detection"""
+        self.headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Sec-Fetch-User': '?1',
+            'Cache-Control': 'max-age=0',
+            'TE': 'trailers',
+        }
+        self.scraper.headers.update(self.headers)
+    
+    def get_product_info(self, url: str) -> Dict[str, Any]:
+        """Extract product information from Flipkart URL with retries"""
+        max_retries = 3
+        attempt = 0
+        name, price, old_price, discount, reviews = None, None, None, None, None
+
+        while attempt < max_retries and not (name and price):
+            try:
+                time.sleep(random.uniform(2, 5))  # random delay
+                self.set_random_headers()  # rotate headers each attempt
+                response = self.scraper.get(url, timeout=15)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.content, 'html.parser')
+
+                # Product name
+                name_selectors = [
+                    'h1._6EBuvT span.VU-ZEz',
+                    'span.VU-ZEz',
+                    'h1._6EBuvT',
+                    'span.B_NuCI',
+                    'h1.yhB1nd',
+                    'h1._2Kn22P',
+                ]
+                for selector in name_selectors:
+                    element = soup.select_one(selector)
+                    if element:
+                        name = element.get_text(strip=True)
+                        break
+
+                # Price
+                price_selectors = [
+                    'div.Nx9bqj.CxhGGd',   # new Flipkart structure
+                    'div._30jeq3._16Jk6d',
+                    'div._30jeq3._1_WHN1',
+                ]
+                for selector in price_selectors:
+                    element = soup.select_one(selector)
+                    if element:
+                        price = self.extract_price(element.get_text(strip=True))
+                        if price:
+                            break
+
+                # Old price
+                old_price_el = soup.select_one('div.yRaY8j.A6+E6v')
+                if old_price_el:
+                    old_price = self.extract_price(old_price_el.get_text(strip=True))
+
+                # Discount
+                discount_el = soup.select_one('div.UkUFwK.WW8yVX span')
+                if discount_el:
+                    discount = discount_el.get_text(strip=True)
+
+                # Reviews
+                reviews_el = soup.select_one('span.Wphh3N')
+                if reviews_el:
+                    reviews = reviews_el.get_text(strip=True)
+
+                if name and price:
+                    logger.info(f"✅ Scraped Flipkart product (attempt {attempt+1}): {name} - {price}")
+                    return {
+                        'name': name,
+                        'price': price,
+                        'old_price': old_price,
+                        'discount': discount,
+                        'reviews': reviews,
+                        'success': True
+                    }
+
+            except Exception as e:
+                logger.warning(f"⚠️ Attempt {attempt+1} failed for {url}: {e}")
+
+            attempt += 1
+
+        logger.error(f"❌ Failed to scrape Flipkart product after {max_retries} attempts: {url}")
+        return {'success': False, 'error': 'Unable to fetch product details after retries'}
+
+    def is_valid_url(self, url: str) -> bool:
+        """Check if URL is a valid Flipkart product URL"""
+        parsed = urlparse(url)
+        return 'flipkart.com' in parsed.netloc and ('/p/' in parsed.path or '/product/' in parsed.path)
+# Scraper factory
+class ScraperFactory:
+    @staticmethod
+    def get_scraper(url: str) -> BaseScraper:
+        """Get appropriate scraper based on URL"""
+        if 'amazon' in url:
+            return AmazonScraper()
+        elif 'flipkart' in url:
+            return FlipkartScraper()
+        else:
+            raise ValueError(f"Unsupported store URL: {url}")
+    
+    @staticmethod
+    def get_store_name(url: str) -> str:
+        """Get store name from URL"""
+        if 'amazon' in url:
+            return "amazon"
+        elif 'flipkart' in url:
+            return "flipkart"
+        else:
+            return "unknown"
+
 # Telegram notification service
 class TelegramNotifier:
     def __init__(self, bot_token: str, chat_id: str):
@@ -204,8 +377,8 @@ class TelegramNotifier:
     async def send_price_alert(self, alert: PriceAlert):
         """Send price alert to Telegram"""
         try:
-            # Determine currency symbol based on price format
-            currency = "₹" if "amazon.in" in alert.url else "$"
+            # Determine currency symbol based on URL
+            currency = "₹" if any(x in alert.url for x in ["amazon.in", "flipkart.com"]) else "$"
             
             message = f"🚨 *PRICE ALERT!* 🚨\n\n"
             message += f"📦 *Product:* {alert.product_name[:50]}...\n\n"
@@ -257,6 +430,9 @@ async def check_all_prices(db: Session):
     for product in products:
         try:
             logger.info(f"Checking: {product.name}")
+            
+            # Get appropriate scraper for the product's store
+            scraper = ScraperFactory.get_scraper(product.url)
             product_info = scraper.get_product_info(product.url)
             
             if product_info['success'] and product_info['price']:
@@ -338,9 +514,9 @@ def run_scheduler():
 
 # FastAPI app
 app = FastAPI(
-    title="Amazon Price Tracker API",
-    description="Track Amazon product prices and get automated notifications",
-    version="2.0.0"
+    title="E-Commerce Price Tracker API",
+    description="Track product prices from Amazon, Flipkart and get automated notifications",
+    version="2.1.0"
 )
 
 app.add_middleware(
@@ -352,26 +528,30 @@ app.add_middleware(
 )
 
 # Initialize services
-scraper = AmazonScraper()
 notifier = TelegramNotifier(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)
 
 # API Routes
 @app.get("/")
 async def root():
     return {
-        "message": "Amazon Price Tracker API with Automated Alerts", 
-        "version": "2.0.0",
-        "features": ["Automated hourly checks", "Telegram notifications", "Price history tracking"],
-        "status": "🟢 Running"
+        "message": "E-Commerce Price Tracker API with Automated Alerts", 
+        "version": "2.1.0",
+        "features": ["Amazon & Flipkart support", "Automated hourly checks", "Telegram notifications", "Price history tracking"],
+        "status": "🟢 Running",
+        "supported_stores": ["Amazon", "Flipkart"]
     }
 
 @app.post("/products/", response_model=ProductResponse)
 async def add_product(product: ProductCreate, db: Session = Depends(get_db)):
     """Add a new product to track"""
     
-    # Validate Amazon URL
-    if not scraper.is_valid_amazon_url(str(product.url)):
-        raise HTTPException(status_code=400, detail="Invalid Amazon URL")
+    # Get appropriate scraper and validate URL
+    try:
+        scraper = ScraperFactory.get_scraper(str(product.url))
+        if not scraper.is_valid_url(str(product.url)):
+            raise HTTPException(status_code=400, detail="Invalid product URL for this store")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     
     # Check if product already exists
     existing = db.query(Product).filter(Product.url == str(product.url)).first()
@@ -384,6 +564,9 @@ async def add_product(product: ProductCreate, db: Session = Depends(get_db)):
     if not product_info['success']:
         raise HTTPException(status_code=400, detail=f"Failed to fetch product info: {product_info.get('error', 'Unknown error')}")
     
+    # Determine store name
+    store = ScraperFactory.get_store_name(str(product.url))
+    
     # Create product record
     db_product = Product(
         name=product.name or product_info['name'],
@@ -393,7 +576,8 @@ async def add_product(product: ProductCreate, db: Session = Depends(get_db)):
         lowest_price=product_info['price'],
         highest_price=product_info['price'],
         last_checked=datetime.utcnow(),
-        user_id=product.user_id
+        user_id=product.user_id,
+        store=store
     )
     
     db.add(db_product)
@@ -408,7 +592,7 @@ async def add_product(product: ProductCreate, db: Session = Depends(get_db)):
     db.add(price_history)
     db.commit()
     
-    logger.info(f"✅ Added product: {db_product.name} (Current: {product_info['price']}, Target: {product.target_price})")
+    logger.info(f"✅ Added product: {db_product.name} (Current: {product_info['price']}, Target: {product.target_price}, Store: {store})")
     return db_product
 
 @app.get("/products/", response_model=List[ProductResponse])
@@ -490,7 +674,7 @@ async def scheduler_status():
 # Startup event
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🚀 Amazon Price Tracker API with Automated Alerts starting...")
+    logger.info("🚀 E-Commerce Price Tracker API with Automated Alerts starting...")
     
     # Schedule price checks
     schedule_price_checks()
@@ -501,6 +685,7 @@ async def startup_event():
     
     logger.info("✅ Background scheduler started successfully!")
     logger.info("🔔 Automated alerts are now active!")
+    logger.info("🛍️ Supported stores: Amazon, Flipkart")
 
 # Health check endpoint
 @app.get("/health")
@@ -512,7 +697,8 @@ async def health_check(db: Session = Depends(get_db)):
         "database": "connected",
         "active_products": active_products,
         "scheduler": "running",
-        "alerts": "enabled"
+        "alerts": "enabled",
+        "supported_stores": ["Amazon", "Flipkart"]
     }
 
 # Statistics endpoint
@@ -523,6 +709,10 @@ async def get_stats(db: Session = Depends(get_db)):
     active_products = db.query(Product).filter(Product.is_active == True).count()
     total_price_checks = db.query(PriceHistory).count()
     
+    # Count by store
+    amazon_products = db.query(Product).filter(Product.store == "amazon").count()
+    flipkart_products = db.query(Product).filter(Product.store == "flipkart").count()
+    
     # Recent activity (last 24 hours)
     since_yesterday = datetime.utcnow() - timedelta(days=1)
     recent_checks = db.query(PriceHistory).filter(PriceHistory.timestamp >= since_yesterday).count()
@@ -531,6 +721,9 @@ async def get_stats(db: Session = Depends(get_db)):
         "total_products": total_products,
         "active_products": active_products,
         "inactive_products": total_products - active_products,
+        "amazon_products": amazon_products,
+        "flipkart_products": flipkart_products,
+        "other_stores": total_products - amazon_products - flipkart_products,
         "total_price_checks": total_price_checks,
         "recent_checks_24h": recent_checks,
         "scheduler_jobs": len(schedule.jobs),
@@ -539,5 +732,6 @@ async def get_stats(db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    logger.info("🚀 Starting Amazon Price Tracker with Automated Alerts...")
+    reset_database()  # Add this line
+    logger.info("🚀 Starting E-Commerce Price Tracker with Automated Alerts...")
     uvicorn.run(app, host="0.0.0.0", port=8000)
