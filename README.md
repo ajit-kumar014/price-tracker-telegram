@@ -60,8 +60,14 @@ Check this out this will be helpfull:
 git clone https://github.com/yourusername/Amazon_Flipkart-price-tracker.git
 cd Amazon_Flipkart-price-tracker
 
+# Make app directory
+mkdir app
+
+# Make docker image using docker build
+docker build -t app .
+
 # Configure environment
-cp .env.example .env
+nano .env
 # Edit .env with your Telegram credentials
 
 # Start the application
@@ -69,6 +75,8 @@ docker-compose up -d
 
 # Check if it's running
 curl http://localhost:8000/health
+
+#Access all functionality at localhost:8000/docs or IP_ADDRESS:8000/docs from any device in the local network.
 ```
 
 Your API will be available at `http://localhost:8000` with documentation at `http://localhost:8000/docs`
