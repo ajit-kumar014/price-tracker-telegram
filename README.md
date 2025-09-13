@@ -118,7 +118,7 @@ TELEGRAM_BOT_TOKEN=1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi
 TELEGRAM_CHAT_ID=123456789
 
 # Optional Configuration
-DATABASE_URL=sqlite:///./price_tracker.db
+DATABASE_URL="postgresql+psycopg2://jack@localhost:5432/price_tracker"
 LOG_LEVEL=INFO
 ```
 
