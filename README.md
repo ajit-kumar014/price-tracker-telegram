@@ -53,7 +53,7 @@ Check this out this will be helpfull:
    ```
    Look for `"chat":{"id":<YOUR_CHAT_ID>}` in the response
 
-### 2. Quick Docker Start
+### 2. Quick Docker Start (make sure port 8000 and 5432 are not used otherwise change the ports in the docker compose file)
 
 ```bash
 # Clone the repository
