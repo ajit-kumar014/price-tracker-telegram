@@ -175,27 +175,6 @@ docker run -d \
   price-tracker
 ```
 
-### Homelab Deployment with Traefik
-
-```yaml
-# docker-compose.override.yml
-version: '3.8'
-
-services:
-  price-tracker:
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.price-tracker.rule=Host(`price-tracker.yourdomain.com`)"
-      - "traefik.http.routers.price-tracker.tls=true"
-      - "traefik.http.routers.price-tracker.tls.certresolver=letsencrypt"
-    networks:
-      - traefik
-    
-networks:
-  traefik:
-    external: true
-```
-
 ### Resource Requirements
 
 - **Memory**: 256MB minimum, 512MB recommended
