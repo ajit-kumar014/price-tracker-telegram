@@ -40,6 +40,8 @@ A robust, scalable price tracking system built with FastAPI, capable of monitori
 - Telegram Chat ID
 
 ### 1. Telegram Bot Setup
+Check this out this will be helpfull:
+[](https://gist.github.com/nafiesl/4ad622f344cd1dc3bb1ecbe468ff9f8a)
 
 1. Message [@BotFather](https://t.me/BotFather) on Telegram
 2. Create a new bot: `/newbot`
