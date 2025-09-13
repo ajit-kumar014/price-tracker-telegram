@@ -164,25 +164,6 @@ http://localhost:8000
 | `GET` | `/health` | Health check |
 | `GET` | `/stats` | System statistics |
 
-## 🐳 Docker Deployment
-
-### Basic Deployment
-
-```bash
-# Using docker-compose (recommended)
-docker-compose up -d
-
-# Using Docker directly
-docker build -t price-tracker .
-docker run -d \
-  --name price-tracker \
-  -p 8000:8000 \
-  -v $(pwd)/data:/app/data \
-  -e TELEGRAM_BOT_TOKEN="your_token" \
-  -e TELEGRAM_CHAT_ID="your_chat_id" \
-  price-tracker
-```
-
 ### Resource Requirements
 
 - **Memory**: 256MB minimum, 512MB recommended
