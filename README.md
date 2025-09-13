@@ -376,18 +376,6 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 ```
 
-#### Database Query Debugging
-
-```bash
-# Access SQLite database directly
-docker-compose exec price-tracker sqlite3 data/price_tracker.db
-
-# Common queries
-.tables
-SELECT COUNT(*) FROM products WHERE is_active = 1;
-SELECT name, current_price, target_price FROM products ORDER BY last_checked DESC LIMIT 10;
-```
-
 ## 🏠 Homelab Integration
 
 ### Portainer Stack
