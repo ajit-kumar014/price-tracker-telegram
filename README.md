@@ -82,6 +82,9 @@ Your API will be available at `http://localhost:8000` with documentation at `htt
 git clone https://github.com/yourusername/Amazon_Flipkart-price-tracker.git
 cd Amazon_Flipkart-price-tracker
 
+# Making docker image from DockerFile.
+docker built -t app .
+
 # Create environment file
 cat > .env << EOF
 TELEGRAM_BOT_TOKEN=your_bot_token_here
@@ -93,28 +96,6 @@ docker-compose up -d
 
 # View logs
 docker-compose logs -f
-```
-
-### Option 2: Manual Installation
-
-```bash
-# Clone repository
-git clone https://github.com/yourusername/Amazon_Flipkart-price-tracker.git
-cd Amazon_Flipkart-price-tracker
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set environment variables
-export TELEGRAM_BOT_TOKEN="your_bot_token_here"
-export TELEGRAM_CHAT_ID="your_chat_id_here"
-
-# Run the application
-python main.py
 ```
 
 ## 🛠️ Configuration
