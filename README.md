@@ -76,7 +76,7 @@ docker-compose up -d
 # Check if it's running
 curl http://localhost:8000/health
 
-#Access all functionality at localhost:8000/docs or IP_ADDRESS:8000/docs from any device in the local network.
+Access all functionality at localhost:8000/docs or IP_ADDRESS:8000/docs from any device in the local network.
 ```
 
 Your API will be available at `http://localhost:8000` with documentation at `http://localhost:8000/docs`
